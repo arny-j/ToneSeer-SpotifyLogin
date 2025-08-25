@@ -7,28 +7,26 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
   const code = req.query.code;
-  let session_id = null;
-  let code_verifier = null;
+  const state = req.query.state;
 
-  if (!code) {
-    return res.status(400).send("No code received from Spotify.");
-  }
+  if (!code) return res.status(400).send("No code received from Spotify.");
+  if (!state) return res.status(400).send("No state returned from Spotify.");
 
-  // 🔑 Extract session_id from state
+  let session_id;
   try {
-    const state = req.query.state;
-    if (state) {
-      const parsed = JSON.parse(decodeURIComponent(state));
-      session_id = parsed.session_id;
-      code_verifier = parsed.code_verifier;
-    }
-  } catch (e) {
-    console.error("Error parsing state:", e);
+    const stateObj = JSON.parse(decodeURIComponent(state));
+    session_id = stateObj.session_id;
+  } catch (err) {
+    console.error("Error parsing state:", err);
+    return res.status(400).send("Invalid state format.");
   }
 
-  if (!session_id) {
-    return res.status(400).send("No session_id found in state.");
-  }
+  if (!session_id) return res.status(400).send("No session_id found in state.");
+
+  // Retrieve code_verifier from query or localStorage-like solution
+  // If using serverless, you can pass code_verifier from client in a POST request or via temporary storage
+  const codeVerifier = req.query.code_verifier;
+  if (!codeVerifier) return res.status(400).send("No code_verifier provided.");
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -39,7 +37,7 @@ export default async function handler(req, res) {
     code: code,
     redirect_uri: redirectUri,
     client_id: clientId,
-    code_verifier: code_verifier
+    code_verifier: codeVerifier
   });
 
   try {

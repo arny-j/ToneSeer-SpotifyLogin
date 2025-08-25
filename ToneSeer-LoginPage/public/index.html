@@ -36,16 +36,16 @@
     }
 
     document.getElementById("loginButton").addEventListener("click", async () => {
-      const nonce = Math.random().toString(36).substring(2, 15);
+     
 
       // Generate PKCE verifier/challenge
       const codeVerifier = Math.random().toString(36).substring(2, 100);
-      localStorage.setItem("code_verifier", codeVerifier);
-
       const hashed = await sha256(codeVerifier);
       const codeChallenge = base64urlencode(hashed);
-
+      localStorage.setItem("code_verifier", codeVerifier);
+      
       // Build state with session_id + nonce
+      const nonce = Math.random().toString(36).substring(2, 15);
       const stateObj = { session_id: sessionId, nonce: nonce, code_verifier: codeVerifier };
       const stateParam = encodeURIComponent(JSON.stringify(stateObj));
 
