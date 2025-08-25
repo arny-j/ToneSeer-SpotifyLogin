@@ -17,10 +17,10 @@ export default async function handler(req, res) {
   }
 
   // decode state → should contain device_id
-  let device_id;
+  let session_id;
   try {
     const stateObj = JSON.parse(decodeURIComponent(state));
-    device_id = stateObj.device_id;
+    session_id = stateObj.session_id;
   } catch (err) {
     return res.status(400).send("Invalid state format.");
   }
@@ -48,16 +48,16 @@ export default async function handler(req, res) {
 
     console.log("Spotify token received:", tokenData);
 
-    if (!device_id) return res.status(400).send("No device ID found in state.");
+    if (!session_id) return res.status(400).send("No session ID found in state.");
 
     const { error } = await supabase
       .from("spotify_tokens")
       .upsert({
-        device_id: device_id,
+        session_id: session_id,
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
         expires_at: Math.floor(Date.now() / 1000) + tokenData.expires_in
-      }, { onConflict: ["device_id"] });
+      }, { onConflict: ["session_id"] });
 
     if (error) {
       console.error(error);

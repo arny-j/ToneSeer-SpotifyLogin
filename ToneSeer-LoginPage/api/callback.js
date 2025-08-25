@@ -7,25 +7,25 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
   const code = req.query.code;
-  let device_id = null;
+  let session_id = null;
 
   if (!code) {
     return res.status(400).send("No code received from Spotify.");
   }
 
-  // 🔑 Extract device_id from state
+  // 🔑 Extract session_id from state
   try {
     const state = req.query.state;
     if (state) {
       const parsed = JSON.parse(decodeURIComponent(state));
-      device_id = parsed.device_id;
+      session_id = parsed.session_id;
     }
   } catch (e) {
     console.error("Error parsing state:", e);
   }
 
-  if (!device_id) {
-    return res.status(400).send("No device_id found in state.");
+  if (!session_id) {
+    return res.status(400).send("No session_id found in state.");
   }
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
@@ -57,11 +57,11 @@ export default async function handler(req, res) {
     const { error } = await supabase
       .from("spotify_tokens")
       .upsert({
-        device_id: device_id,
+        session_id: session_id,
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
         expires_at: Math.floor(Date.now() / 1000) + tokenData.expires_in
-      }, { onConflict: ["device_id"] });
+      }, { onConflict: ["session_id"] });
 
     if (error) {
       console.error("Supabase upsert error:", error);
