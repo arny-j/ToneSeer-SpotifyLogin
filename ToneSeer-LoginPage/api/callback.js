@@ -1,9 +1,31 @@
 import fetch from "node-fetch";
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
   const code = req.query.code;
+  let device_id = null;
+
   if (!code) {
     return res.status(400).send("No code received from Spotify.");
+  }
+
+  // 🔑 Extract device_id from state
+  try {
+    const state = req.query.state;
+    if (state) {
+      const parsed = JSON.parse(decodeURIComponent(state));
+      device_id = parsed.device_id;
+    }
+  } catch (e) {
+    console.error("Error parsing state:", e);
+  }
+
+  if (!device_id) {
+    return res.status(400).send("No device_id found in state.");
   }
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
@@ -27,12 +49,10 @@ export default async function handler(req, res) {
 
     const tokenData = await tokenRes.json();
 
-    // TODO: store tokenData in a DB or memory associated with a device ID
-    console.log("Spotify token received:", tokenData);
-    // Device ID must come from the index.html QR code or query param
-   
-    const device_id = req.query.device_id;
-    if (!device_id) return res.status(400).send("No device ID provided.");
+    if (!tokenData.access_token) {
+      console.error("Spotify token error:", tokenData);
+      return res.status(500).send("Failed to get token from Spotify.");
+    }
 
     const { error } = await supabase
       .from("spotify_tokens")
@@ -44,11 +64,10 @@ export default async function handler(req, res) {
       }, { onConflict: ["device_id"] });
 
     if (error) {
-      console.error(error);
+      console.error("Supabase upsert error:", error);
       return res.status(500).send("Error storing token.");
     }
-    
-    // Tell user login was successful
+
     res.send("<h1>Spotify login successful! You can return to your TV.</h1>");
   } catch (err) {
     console.error(err);

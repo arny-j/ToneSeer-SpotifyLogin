@@ -15,6 +15,10 @@
     const redirectUri = "https://tone-seer-spotify-login.vercel.app/api/callback"; // your server endpoint
     const scopes = "user-read-private user-read-email";
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const deviceId = urlParams.get("device_id");
+    if (!deviceId) alert("No device_id found!");
+
     document.getElementById("loginButton").addEventListener("click", () => {
       const state = Math.random().toString(36).substring(2, 15);
       const codeVerifier = Math.random().toString(36).substring(2, 100);
@@ -32,8 +36,21 @@
       }
 
       sha256(codeVerifier).then(codeChallenge => {
-        const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&code_challenge_method=S256&code_challenge=${codeChallenge}`;
-        window.location = url;
+      // 👇 Pack device_id + nonce into state
+      const stateObj = { device_id: deviceId, nonce: nonce };
+      const stateParam = encodeURIComponent(JSON.stringify(stateObj));
+
+      const url =
+        `https://accounts.spotify.com/authorize?` +
+        `response_type=code` +
+        `&client_id=${clientId}` +
+        `&scope=${encodeURIComponent(scopes)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&state=${stateParam}` +
+        `&code_challenge_method=S256` +
+        `&code_challenge=${codeChallenge}`;
+
+      window.location = url;
       });
     });
   </script>
