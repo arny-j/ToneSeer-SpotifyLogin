@@ -18,7 +18,10 @@
     // Get session_id from the QR code link
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get("session_id");
-    if (!sessionId) alert("No session_id found!");
+    if (!sessionId){ 
+      alert("No session_id found!");
+      throw new Error("Missing session_id");
+    }
 
     // Helper: base64url encode
     function base64urlencode(str) {
@@ -36,33 +39,46 @@
     }
 
     document.getElementById("loginButton").addEventListener("click", async () => {
-     
-
-      // Generate PKCE verifier/challenge
-      const codeVerifier = Math.random().toString(36).substring(2, 100);
+      // Generate PKCE verifier + challenge
+      const codeVerifier = Math.random().toString(36).substring(2, 128);
       const hashed = await sha256(codeVerifier);
       const codeChallenge = base64urlencode(hashed);
-      localStorage.setItem("code_verifier", codeVerifier);
-      
-      // Build state with session_id + nonce
-      const nonce = Math.random().toString(36).substring(2, 15);
-      const stateObj = { session_id: sessionId, nonce: nonce, code_verifier: codeVerifier };
-      const stateParam = encodeURIComponent(JSON.stringify(stateObj));
+
+      // Store session_id + code_verifier via serverless function
+      try {
+        const res = await fetch("/api/saveVerifier", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId, code_verifier: codeVerifier })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error("Failed to store verifier: " + text);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error storing session info.");
+        return;
+      }
 
       // Build Spotify Auth URL
+      const state = encodeURIComponent(sessionId); // state = session_id
       const url =
         `https://accounts.spotify.com/authorize?` +
         `response_type=code` +
         `&client_id=${clientId}` +
         `&scope=${encodeURIComponent(scopes)}` +
         `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&state=${stateParam}` +
+        `&state=${state}` +
         `&code_challenge_method=S256` +
         `&code_challenge=${codeChallenge}`;
 
+      // Redirect to Spotify login
       window.location = url;
     });
   </script>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
