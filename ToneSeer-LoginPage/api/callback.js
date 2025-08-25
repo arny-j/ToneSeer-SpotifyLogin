@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
     if (!tokenData.access_token) {
       console.error("Spotify token error:", tokenData);
-      return res.status(500).send("Failed to get token from Spotify.");
+      return res.status(500).send(`Failed to get token from Spotify: ${tokenData.error || "unknown error"}`);
     }
 
     const { error } = await supabase
