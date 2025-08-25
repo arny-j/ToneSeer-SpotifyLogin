@@ -12,24 +12,21 @@ export default async function handler(req, res) {
   if (!code) return res.status(400).send("No code received from Spotify.");
   if (!state) return res.status(400).send("No state returned from Spotify.");
 
-  let session_id;
+  // Parse state once and get session_id + code_verifier
+  let session_id, code_verifier;
   try {
     const stateObj = JSON.parse(decodeURIComponent(state));
     session_id = stateObj.session_id;
+    code_verifier = stateObj.code_verifier;
   } catch (err) {
     console.error("Error parsing state:", err);
     return res.status(400).send("Invalid state format.");
   }
 
   if (!session_id) return res.status(400).send("No session_id found in state.");
-
-  // Retrieve code_verifier from query or localStorage-like solution
-  // If using serverless, you can pass code_verifier from client in a POST request or via temporary storage
-  const codeVerifier = req.query.code_verifier;
-  if (!codeVerifier) return res.status(400).send("No code_verifier provided.");
+  if (!code_verifier) return res.status(400).send("No code_verifier provided.");
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
   const redirectUri = "https://tone-seer-spotify-login.vercel.app/api/callback";
 
   const body = new URLSearchParams({
@@ -37,7 +34,7 @@ export default async function handler(req, res) {
     code: code,
     redirect_uri: redirectUri,
     client_id: clientId,
-    code_verifier: codeVerifier
+    code_verifier: code_verifier
   });
 
   try {
