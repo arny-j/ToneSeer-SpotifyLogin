@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     if (state) {
       const parsed = JSON.parse(decodeURIComponent(state));
       session_id = parsed.session_id;
+      code_verifier = parsed.code_verifier;
     }
   } catch (e) {
     console.error("Error parsing state:", e);
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
     code: code,
     redirect_uri: redirectUri,
     client_id: clientId,
-    client_secret: clientSecret
+    code_verifier: code_verifier
   });
 
   try {

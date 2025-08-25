@@ -46,7 +46,7 @@
       const codeChallenge = base64urlencode(hashed);
 
       // Build state with session_id + nonce
-      const stateObj = { session_id: sessionId, nonce: nonce };
+      const stateObj = { session_id: sessionId, nonce: nonce, code_verifier: codeVerifier };
       const stateParam = encodeURIComponent(JSON.stringify(stateObj));
 
       // Build Spotify Auth URL
