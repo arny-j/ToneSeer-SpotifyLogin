@@ -8,6 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export default async function handler(req, res) {
   const code = req.query.code;
   let session_id = null;
+  let code_verifier = null;
 
   if (!code) {
     return res.status(400).send("No code received from Spotify.");
