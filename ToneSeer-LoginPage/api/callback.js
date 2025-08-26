@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
@@ -11,21 +11,21 @@ export default async function handler(req, res) {
   if (!code) return res.status(400).send("No code received from Spotify.");
   if (!state) return res.status(400).send("No state returned from Spotify.");
 
-  // session_id is passed in state
   const session_id = state;
 
-  // Retrieve code_verifier from Supabase
+  // Retrieve code_verifier before exchanging the code
   const { data, error: fetchError } = await supabase
     .from("spotify_tokens")
     .select("code_verifier")
     .eq("session_id", session_id)
     .single();
 
-  if (fetchError || !data || !data.code_verifier) {
+  if (fetchError || !data?.code_verifier) {
     console.error("Failed to retrieve code_verifier:", fetchError);
     return res.status(400).send("No code_verifier found for this session_id.");
   }
 
+  const code_verifier = data.code_verifier;
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const redirectUri = "https://tone-seer-spotify-login.vercel.app/api/callback";
 
@@ -52,14 +52,9 @@ export default async function handler(req, res) {
       return res.status(500).send(`Failed to get token: ${tokenData.error || "unknown"}`);
     }
 
-    const { data } = await supabase
-    .from("spotify_tokens")
-    .select("code_verifier")
-    .eq("session_id". session_id)
-    .single();
-    const code_verifier = data?.code_verifier;
-    const expires_at = new Date((Math.floor(Date.now() / 1000) + tokenData.expires_in) * 1000)
-    // Store tokens in Supabase
+    const expires_at = new Date((Math.floor(Date.now() / 1000) + tokenData.expires_in) * 1000);
+
+    // Upsert tokens including the verifier
     const { error: upsertError } = await supabase
       .from("spotify_tokens")
       .upsert(
@@ -68,7 +63,7 @@ export default async function handler(req, res) {
           code_verifier,
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
-          expires_at: expires_at
+          expires_at
         },
         { onConflict: ["session_id"] }
       );
