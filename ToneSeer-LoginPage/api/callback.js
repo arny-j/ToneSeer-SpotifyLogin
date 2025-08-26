@@ -53,6 +53,7 @@ export default async function handler(req, res) {
       return res.status(500).send(`Failed to get token: ${tokenData.error || "unknown"}`);
     }
 
+    const expires_at = new Date((Math.floor(Date.now() / 1000) + tokenData.expires_in) * 1000)
     // Store tokens in Supabase
     const { error: upsertError } = await supabase
       .from("spotify_tokens")
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
           session_id,
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
-          expires_at: Math.floor(Date.now() / 1000) + tokenData.expires_in
+          expires_at: expires_at
         },
         { onConflict: ["session_id"] }
       );
