@@ -26,7 +26,6 @@ export default async function handler(req, res) {
     return res.status(400).send("No code_verifier found for this session_id.");
   }
 
-  const code_verifier = data.code_verifier;
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const redirectUri = "https://tone-seer-spotify-login.vercel.app/api/callback";
 
@@ -53,6 +52,12 @@ export default async function handler(req, res) {
       return res.status(500).send(`Failed to get token: ${tokenData.error || "unknown"}`);
     }
 
+    const { data } = await supabase
+    .from("spotify_tokens")
+    .select("code_verifier")
+    .eq("session_id". session_id)
+    .single();
+    const code_verifier = data?.code_verifier;
     const expires_at = new Date((Math.floor(Date.now() / 1000) + tokenData.expires_in) * 1000)
     // Store tokens in Supabase
     const { error: upsertError } = await supabase
@@ -60,6 +65,7 @@ export default async function handler(req, res) {
       .upsert(
         {
           session_id,
+          code_verifier,
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
           expires_at: expires_at
