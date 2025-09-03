@@ -13,7 +13,7 @@
   <script>
     const clientId = "1d13e13876ab42d6aa28fea0a53a3d18";
     const redirectUri = "https://tone-seer-spotify-login.vercel.app/api/callback"; 
-    const scopes = "user-read-private user-read-email playlist-read-private playlist-read-collaborative"; // Need to update this to match the necessary functionality
+    const scopes = "user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public"; // Need to update this to match the necessary functionality
 
     // Get session_id from the QR code link
     const urlParams = new URLSearchParams(window.location.search);
